@@ -1,0 +1,88 @@
+version: 2
+
+# Modelo en 3FN. dbt no crea claves foráneas: la integridad se verifica con
+# tests (unique, not_null, relationships), que corren en cada "dbt build".
+models:
+  - name: ocupacion
+    description: "Catálogo de ocupaciones."
+    columns:
+      - name: ocupacion_id
+        data_tests: [unique, not_null]
+      - name: nombre
+        data_tests: [unique, not_null]
+
+  - name: usuario
+    columns:
+      - name: usuario_id
+        data_tests: [unique, not_null]
+      - name: ocupacion_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ocupacion')
+                field: ocupacion_id
+
+  - name: pelicula
+    description: "Una fila por película; el título sin el año."
+    columns:
+      - name: pelicula_id
+        data_tests: [unique, not_null]
+      - name: titulo
+        data_tests: [not_null]
+
+  - name: genero
+    description: "Catálogo de géneros."
+    columns:
+      - name: genero_id
+        data_tests: [unique, not_null]
+      - name: nombre
+        data_tests: [unique, not_null]
+
+  - name: pelicula_genero
+    description: "Tabla puente N:M entre películas y géneros."
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "(pelicula_id || '-' || genero_id)"
+    columns:
+      - name: pelicula_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('pelicula')
+                field: pelicula_id
+      - name: genero_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('genero')
+                field: genero_id
+
+  - name: calificacion
+    description: "Un voto por usuario y película (clave compuesta)."
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "(usuario_id || '-' || pelicula_id)"
+    columns:
+      - name: usuario_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('usuario')
+                field: usuario_id
+      - name: pelicula_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('pelicula')
+                field: pelicula_id
+      - name: puntaje
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false

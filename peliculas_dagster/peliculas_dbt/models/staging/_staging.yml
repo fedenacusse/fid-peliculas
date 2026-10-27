@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_peliculas
+    description: "Películas con tipos limpios y el título separado del año."
+    columns:
+      - name: pelicula_id
+        data_tests: [unique, not_null]
+  - name: stg_peliculas_generos
+    description: "Relación película-género, pasada de columnas 0/1 a filas."
+  - name: stg_usuarios
+    columns:
+      - name: usuario_id
+        data_tests: [unique, not_null]
+  - name: stg_scores
+    columns:
+      - name: puntaje
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false

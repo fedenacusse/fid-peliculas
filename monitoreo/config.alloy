@@ -1,0 +1,18 @@
+// Alloy lee las métricas de Postgres (reemplaza al postgres-exporter)
+prometheus.exporter.postgres "tpch" {
+  data_source_names = ["postgresql://admin:password123@postgres-tpch:5432/tpch?sslmode=disable"]
+}
+
+// Cada 15 s junta esas métricas...
+prometheus.scrape "postgres" {
+  targets         = prometheus.exporter.postgres.tpch.targets
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+}
+
+// ...y las manda a Prometheus
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://fid-prometheus:9090/api/v1/write"
+  }
+}

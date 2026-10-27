@@ -1,0 +1,15 @@
+# Solo se versiona lo de este proyecto; el resto de tpch_project queda afuera
+/*
+!/.gitignore
+!/README.md
+!/peliculas_dagster/
+!/monitoreo/
+
+# Secretos y archivos generados
+.env
+.dagster_home/
+__pycache__/
+peliculas_dagster/peliculas_dbt/target/
+peliculas_dagster/peliculas_dbt/logs/
+peliculas_dagster/peliculas_dbt/dbt_packages/
+.user.yml

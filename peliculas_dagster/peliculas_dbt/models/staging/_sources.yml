@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "CSV del repo dodobeatle/dataeng_peliculas, cargados por Airbyte (Full refresh | Overwrite)."
+    schema: raw
+    tables:
+      - name: peliculas
+        description: "Una fila por película; una columna 0/1 por género. Airbyte renombró columnas (Release_Date, IMDB_URL, Sci_Fi, Film_Noir, Children_s)."
+      - name: usuarios
+        description: "Una fila por usuario con su ocupación y fecha de alta (Active_Since)."
+      - name: scores
+        description: "Una fila por voto: usuario, película, rating 1-5 y fecha."

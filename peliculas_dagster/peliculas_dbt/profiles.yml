@@ -1,0 +1,15 @@
+# Conexión a la base "peliculas" del contenedor postgres-tpch.
+# Usa localhost porque dbt corre en la notebook y el contenedor
+# publica el puerto 5432: funciona igual en cualquier red.
+peliculas:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: admin
+      password: password123
+      dbname: peliculas
+      schema: public
+      threads: 4

@@ -1,0 +1,36 @@
+name: peliculas
+version: "1.0.0"
+profile: peliculas
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# Capas del proyecto (cada una en su propio schema de la base "peliculas"):
+#   raw          -> lo que carga Airbyte (no lo toca dbt)
+#   staging      -> limpieza y tipos, 1 vista por tabla cruda
+#   normalizado  -> modelo en 3FN (tablas)
+#   intermedio   -> joins reutilizables por las consultas
+#   consultas    -> las consultas del pizarrón (vistas)
+models:
+  peliculas:
+    staging:
+      +schema: staging
+      +materialized: table
+    normalizado:
+      +schema: normalizado
+      +materialized: table
+    intermedio:
+      +schema: intermedio
+      +materialized: view
+    consultas:
+      +schema: consultas
+      +materialized: view
+
+# Las validaciones (carpeta tests/) avisan pero no frenan el pipeline:
+# los datos del profe tienen problemas a propósito y queremos verlos.
+data_tests:
+  peliculas:
+    +severity: warn
