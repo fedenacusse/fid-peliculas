@@ -16,7 +16,7 @@ GitHub (CSV) ──Airbyte──► Postgres (raw) ──dbt──► staging �
 |---|---|
 | **Airbyte** | Ingesta de los 3 CSV a `peliculas.raw` (Full refresh, Overwrite) |
 | **PostgreSQL 16** | Almacenamiento (contenedor Docker) |
-| **dbt** | Normalización a 3FN, 24 consultas analíticas y validaciones de calidad |
+| **dbt** | Normalización a 3FN, 20 consultas analíticas y validaciones de calidad |
 | **Dagster** | Orquestación: sincroniza Airbyte y después corre `dbt build`; schedule diario |
 | **Grafana Alloy** | Recolección de métricas de Postgres (reemplaza a postgres_exporter) |
 | **Prometheus + Grafana** | Almacenamiento y visualización de métricas |
