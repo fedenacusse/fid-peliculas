@@ -7,7 +7,7 @@ services:
       - --web.enable-remote-write-receiver
     ports:
       - "9090:9090"
-    restart: unless-stopped
+    restart: "no"
 
   alloy:
     image: grafana/alloy:latest
@@ -23,7 +23,7 @@ services:
       - "12345:12345"
     depends_on:
       - prometheus
-    restart: unless-stopped
+    restart: "no"
 
   grafana:
     image: grafana/grafana:latest
@@ -36,7 +36,7 @@ services:
       - grafana-data:/var/lib/grafana
     ports:
       - "3001:3000"
-    restart: unless-stopped
+    restart: "no"
 
   dozzle:
     image: amir20/dozzle:latest
@@ -45,7 +45,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "8888:8080"
-    restart: unless-stopped
+    restart: "no"
 
 volumes:
   grafana-data:

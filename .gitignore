@@ -14,3 +14,5 @@ peliculas_dagster/peliculas_dbt/target/
 peliculas_dagster/peliculas_dbt/logs/
 peliculas_dagster/peliculas_dbt/dbt_packages/
 .user.yml
+!/levantar.sh
+!/apagar.sh
