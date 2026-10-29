@@ -28,18 +28,18 @@ Se lee de izquierda a derecha y de arriba abajo: Dagster dispara primero a Airby
 
 ## Las piezas de un vistazo
 
-Todo corre en la notebook con Fedora: los servicios son contenedores Docker que arrancan solos al prender la máquina, salvo Dagster, que se levanta a mano. Desde la notebook, las direcciones son `localhost`; desde la PC de casa, cambiás `localhost` por `192.168.1.6`.
+Todo corre en la notebook con Fedora y **nada arranca solo al prenderla**: el stack entero se levanta con `~/tpch_project/levantar.sh` y se apaga con `~/tpch_project/apagar.sh`. Desde la notebook, las direcciones son `localhost`; desde la PC de casa, cambiás `localhost` por `192.168.1.6`.
 
 | Herramienta | Función en el stack | Dónde corre | Dirección | Usuario / contraseña | Cómo arranca |
 | --- | --- | --- | --- | --- | --- |
-| PostgreSQL 16 | Guarda los datos: bases `tpch` y `peliculas` | Contenedor `postgres-tpch` | `localhost:5432` | `admin` / `password123` | Solo |
-| Airbyte | Ingesta: copia los 3 CSV de GitHub a `peliculas.raw` | Kubernetes local (abctl), contenedor `airbyte-abctl-control-plane` | `http://localhost:8000` | `admin@admin.com` / `password123` | Solo |
+| PostgreSQL 16 | Guarda los datos: bases `tpch` y `peliculas` | Contenedor `postgres-tpch` | `localhost:5432` | `admin` / `password123` | `levantar.sh` |
+| Airbyte | Ingesta: copia los 3 CSV de GitHub a `peliculas.raw` | Kubernetes local (abctl), contenedor `airbyte-abctl-control-plane` | `http://localhost:8000` | `admin@admin.com` / `password123` | `levantar.sh` |
 | dbt | Transformación: limpia, normaliza a 3FN, arma las consultas y valida | Programa de Python en el entorno `fid` | Sin interfaz (documentación con `dbt docs serve`) | Usa `profiles.yml` | Lo ejecuta Dagster |
-| Dagster | Orquestación: corre Airbyte y después dbt, en orden, con historial y schedule | Programa de Python en el entorno `fid` | `http://localhost:3000` | Sin login | A mano: `iniciar_dagster.sh` |
-| Grafana Alloy | Recolecta métricas de Postgres y las manda a Prometheus | Contenedor `fid-alloy` | `http://localhost:12345` | Sin login | Solo |
-| Prometheus | Guarda las métricas como series de tiempo | Contenedor `fid-prometheus` | `http://localhost:9090` | Sin login | Solo |
-| Grafana | Muestra las métricas en dashboards | Contenedor `fid-grafana` | `http://localhost:3001` | `admin` / `admin` | Solo |
-| Dozzle | Junta los logs de todos los contenedores | Contenedor `fid-dozzle` | `http://localhost:8888` | Sin login | Solo |
+| Dagster | Orquestación: corre Airbyte y después dbt, en orden, con historial y schedule | Programa de Python en el entorno `fid` | `http://localhost:3000` | Sin login | `levantar.sh` (al final, en primer plano) |
+| Grafana Alloy | Recolecta métricas de Postgres y las manda a Prometheus | Contenedor `fid-alloy` | `http://localhost:12345` | Sin login | `levantar.sh` |
+| Prometheus | Guarda las métricas como series de tiempo | Contenedor `fid-prometheus` | `http://localhost:9090` | Sin login | `levantar.sh` |
+| Grafana | Muestra las métricas en dashboards | Contenedor `fid-grafana` | `http://localhost:3001` | `admin` / `admin` | `levantar.sh` |
+| Dozzle | Junta los logs de todos los contenedores | Contenedor `fid-dozzle` | `http://localhost:8888` | Sin login | `levantar.sh` |
 
 Las carpetas: el proyecto vive en `~/tpch_project`. Dagster y dbt están en `peliculas_dagster/` (dbt adentro, en `peliculas_dbt/`) y el monitoreo en `monitoreo/`. El código está en [github.com/fedenacusse/fid-peliculas](https://github.com/fedenacusse/fid-peliculas).
 
@@ -83,7 +83,7 @@ Decide qué se ejecuta, en qué orden y cuándo, y guarda qué pasó. Trabaja co
 - Materialize all corre primero Airbyte y después dbt, porque dbt depende de `raw`.
 - Tiene un schedule diario a las 8:00 (hora argentina) en Automation; viene apagado y se prende con el switch.
 - Las credenciales de Airbyte están en `peliculas_dagster/.env` (no se sube a GitHub). El historial queda en `peliculas_dagster/.dagster_home`.
-- Iniciar: `conda activate fid` y después `~/tpch_project/peliculas_dagster/iniciar_dagster.sh`. Detener: Ctrl+C en esa terminal, o `pkill -f dagster` desde otra.
+- Iniciar: lo hace `levantar.sh` al final (por dentro activa `fid` y corre `peliculas_dagster/iniciar_dagster.sh`). Detener: Ctrl+C en esa terminal, o `pkill -f dagster` desde otra.
 
 ### Grafana Alloy: el recolector
 
@@ -109,28 +109,33 @@ Muestra en una sola página los logs en vivo de todos los contenedores, con su C
 
 ### El monitoreo en conjunto
 
-Los 4 contenedores `fid-...` se definen en `monitoreo/docker-compose.yml`, comparten la red `monitoreo` y tienen `restart: unless-stopped`, así que arrancan solos. A mano: `cd ~/tpch_project/monitoreo && docker compose up -d` para levantarlos y `docker compose stop` para pararlos.
+Los 4 contenedores `fid-...` se definen en `monitoreo/docker-compose.yml`, comparten la red `monitoreo` y tienen `restart: "no"`, así que no arrancan solos. Los levanta `levantar.sh`; a mano: `cd ~/tpch_project/monitoreo && docker compose up -d` y `docker compose stop`.
 
 ## La rutina
 
-Al prender la notebook ya están arriba Postgres, Airbyte y el monitoreo; lo único manual es Dagster.
+Nada del stack arranca al prender la notebook, así que no consume recursos cuando la usás para otra cosa. Dos scripts hacen todo:
+
+| Script | Qué hace |
+| --- | --- |
+| `~/tpch_project/levantar.sh` | Prende Postgres, Airbyte y el monitoreo, espera a que Airbyte esté listo y deja Dagster corriendo en esa terminal |
+| `~/tpch_project/apagar.sh` | Corta Dagster y apaga el monitoreo, Airbyte y Postgres. Los datos quedan guardados |
 
 **Al llegar a la facultad (en la terminal de la notebook):**
 
-1. Comprobá que los contenedores estén arriba: `docker ps --format "table {{.Names}}\t{{.Status}}"`. Tienen que figurar `postgres-tpch`, `airbyte-abctl-control-plane` y los 4 `fid-...` con estado Up.
-2. Activá el entorno: `conda activate fid` (el prompt pasa de `(base)` a `(fid)`).
-3. Levantá Dagster: `~/tpch_project/peliculas_dagster/iniciar_dagster.sh` y esperá "Serving dagster-webserver". Esa terminal queda ocupada.
-4. Abrí en el navegador lo que necesites: Dagster `localhost:3000`, Airbyte `localhost:8000`, Grafana `localhost:3001`, Dozzle `localhost:8888`.
-5. Para correr el pipeline completo: Dagster, Lineage, Materialize all.
+1. `~/tpch_project/levantar.sh` y esperá "Serving dagster-webserver" (Airbyte tarda 1 a 3 minutos). Esa terminal queda ocupada con Dagster.
+2. Abrí en el navegador lo que necesites: Dagster `localhost:3000`, Airbyte `localhost:8000`, Grafana `localhost:3001`, Dozzle `localhost:8888`.
+3. Para correr el pipeline completo: Dagster, Lineage, Materialize all.
 
 **Al terminar:**
 
-1. Cortá Dagster con Ctrl+C en su terminal.
-2. El resto puede quedar prendido; si querés liberar memoria: `cd ~/tpch_project/monitoreo && docker compose stop`.
+1. Ctrl+C en la terminal de Dagster.
+2. `~/tpch_project/apagar.sh` (en esa misma terminal o en otra). Si te olvidás, al apagar la notebook se cierra todo igual y la próxima vez no arranca solo.
+
+**Para ver qué está prendido:** `docker ps --format "table {{.Names}}\t{{.Status}}"`.
 
 **Desde la PC de casa (por SSH):**
 
-- Ventana A, Dagster y túnel: `ssh -L 8000:localhost:8000 fedenacusse@192.168.1.6`, después los pasos 2 y 3. No se cierra.
+- Ventana A, Dagster y túnel: `ssh -L 8000:localhost:8000 fedenacusse@192.168.1.6`, después `~/tpch_project/levantar.sh`. No se cierra.
 - Ventana B, comandos: `ssh fedenacusse@192.168.1.6`.
 - En el navegador de la PC, `192.168.1.6` en lugar de `localhost` (Airbyte sí va por `localhost:8000`, gracias al túnel).
 - Si el prompt dice `PS C:\...` estás en Windows, no en la notebook: se cortó el SSH.
